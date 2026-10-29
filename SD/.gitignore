@@ -1,0 +1,15 @@
+# Local operating-system and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.bak
+*.swp
+~$*
+
+# Never publish local credentials
+.env
+.env.*
+!.env.example
+
+# Evidence images must remain tracked.
