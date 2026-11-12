@@ -1,0 +1,2599 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Personal Investment Dashboard API",
+    "description": "Lab 5 source-generated contract. All business handlers and authentication adapters are explicitly unimplemented stubs (501). Examples are synthetic, not live market data.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://dashboard.example",
+      "description": "Illustrative same-origin deployment, not a live server"
+    }
+  ],
+  "paths": {
+    "/v1/market/overview": {
+      "get": {
+        "tags": [
+          "Market"
+        ],
+        "summary": "Overview",
+        "description": "Counts of supported active/priced Stocks and known session state. Unknown calendar or incomplete reference coverage returns 503. STUB.",
+        "operationId": "getMarketOverview",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                },
+                "examples": {
+                  "overview": {
+                    "value": {
+                      "exchange": "XNAS",
+                      "sessionDate": "2026-11-12",
+                      "marketStatus": "open",
+                      "activeStockCount": 3400,
+                      "pricedStockCount": 3380,
+                      "asOf": "2026-11-12T15:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "invalid_input": {
+                    "value": {
+                      "error": {
+                        "code": "invalid_input",
+                        "message": "Invalid input."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid session is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "authentication_required": {
+                    "value": {
+                      "error": {
+                        "code": "authentication_required",
+                        "message": "A valid session is required."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Wait before retrying.",
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1.0
+                },
+                "example": 2
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "rate_limited": {
+                    "value": {
+                      "error": {
+                        "code": "rate_limited",
+                        "message": "Wait before retrying."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "internal_error": {
+                    "value": {
+                      "error": {
+                        "code": "internal_error",
+                        "message": "An unexpected server error occurred."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Contract stub: operation is not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "not_implemented": {
+                    "value": {
+                      "error": {
+                        "code": "not_implemented",
+                        "message": "Contract stub: operation is not implemented."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required data or dependency is unavailable.",
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1.0
+                },
+                "example": 2
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "unavailable": {
+                    "value": {
+                      "error": {
+                        "code": "unavailable",
+                        "message": "Required data or dependency is unavailable."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/v1/stocks": {
+      "get": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Stocks",
+        "description": "Active Stocks only. Combine exchange, sector and case-insensitive name/symbol q before pagination. Default symbol ascending then stockId; trending orders absolute percentage change descending then stockId. Cursor binds normalised filters, sort and limit. Unknown/expired/mismatched cursor is 400. STUB.",
+        "operationId": "listStocks",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "exchange",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "const": "XNAS",
+              "type": "string",
+              "default": "XNAS",
+              "title": "Exchange"
+            }
+          },
+          {
+            "name": "sector",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "technology",
+                    "financials",
+                    "healthcare",
+                    "industrials",
+                    "consumer_discretionary",
+                    "consumer_staples",
+                    "energy",
+                    "materials",
+                    "real_estate",
+                    "utilities",
+                    "communication_services",
+                    "unknown"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sector"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "symbol",
+                "trending"
+              ],
+              "type": "string",
+              "default": "symbol",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^[A-Za-z0-9_-]+$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockPage"
+                },
+                "examples": {
+                  "filteredPage": {
+                    "value": {
+                      "items": [
+                        {
+                          "stockId": "stk_aapl",
+                          "symbol": "AAPL",
+                          "name": "Apple Inc.",
+                          "exchange": "XNAS",
+                          "sector": "technology",
+                          "currency": "USD",
+                          "instrumentType": "common",
+                          "active": true,
+                          "quote": {
+                            "price": "230.50",
+                            "currency": "USD",
+                            "providerTime": "2026-11-12T14:44:00Z",
+                            "sessionDate": "2026-11-12",
+                            "status": "delayed",
+                            "ageSeconds": 960
+                          },
+                          "changePercent": "1.32"
+                        }
+                      ],
+                      "nextCursor": "c_page2_example",
+                      "asOf": "2026-11-12T15:00:00Z"
+                    }
+                  },
+                  "emptyList": {
+                    "value": {
+                      "items": [],
+                      "nextCursor": null,
+                      "asOf": "2026-11-12T15:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalid_input": {
+                    "value": {
+                      "error": {
+                        "code": "invalid_input",
+                        "message": "Invalid input."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid session is required.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "authentication_required": {
+                    "value": {
+                      "error": {
+                        "code": "authentication_required",
+                        "message": "A valid session is required."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Wait before retrying.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rate_limited": {
+                    "value": {
+                      "error": {
+                        "code": "rate_limited",
+                        "message": "Wait before retrying."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "value": {
+                      "error": {
+                        "code": "internal_error",
+                        "message": "An unexpected server error occurred."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Contract stub: operation is not implemented.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_implemented": {
+                    "value": {
+                      "error": {
+                        "code": "not_implemented",
+                        "message": "Contract stub: operation is not implemented."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required data or dependency is unavailable.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unavailable": {
+                    "value": {
+                      "error": {
+                        "code": "unavailable",
+                        "message": "Required data or dependency is unavailable."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stocks/{stockId}": {
+      "get": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Stock",
+        "description": "Stable identity lookup; retained inactive instruments remain identifiable. Unknown ID returns 404. STUB.",
+        "operationId": "getStock",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "stockId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^stk_[a-z0-9_]{1,48}$",
+              "title": "Stockid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stock"
+                },
+                "examples": {
+                  "stock": {
+                    "value": {
+                      "stockId": "stk_aapl",
+                      "symbol": "AAPL",
+                      "name": "Apple Inc.",
+                      "exchange": "XNAS",
+                      "sector": "technology",
+                      "currency": "USD",
+                      "instrumentType": "common",
+                      "active": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalid_input": {
+                    "value": {
+                      "error": {
+                        "code": "invalid_input",
+                        "message": "Invalid input."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid session is required.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "authentication_required": {
+                    "value": {
+                      "error": {
+                        "code": "authentication_required",
+                        "message": "A valid session is required."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Wait before retrying.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rate_limited": {
+                    "value": {
+                      "error": {
+                        "code": "rate_limited",
+                        "message": "Wait before retrying."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "value": {
+                      "error": {
+                        "code": "internal_error",
+                        "message": "An unexpected server error occurred."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Contract stub: operation is not implemented.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_implemented": {
+                    "value": {
+                      "error": {
+                        "code": "not_implemented",
+                        "message": "Contract stub: operation is not implemented."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required data or dependency is unavailable.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unavailable": {
+                    "value": {
+                      "error": {
+                        "code": "unavailable",
+                        "message": "Required data or dependency is unavailable."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          },
+          "404": {
+            "description": "No visible resource exists.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "value": {
+                      "error": {
+                        "code": "not_found",
+                        "message": "No visible resource exists."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stocks/{stockId}/price": {
+      "get": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Price",
+        "description": "Return only a policy-valid quotation/close. Preserve source time; normal-session age >20 minutes, missing data or unknown calendar returns 503. Unknown instrument: 404; inactive: 409. STUB.",
+        "operationId": "getStockPrice",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "stockId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^stk_[a-z0-9_]{1,48}$",
+              "title": "Stockid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceResponse"
+                },
+                "examples": {
+                  "price": {
+                    "value": {
+                      "stockId": "stk_aapl",
+                      "quote": {
+                        "price": "230.50",
+                        "currency": "USD",
+                        "providerTime": "2026-11-12T14:44:00Z",
+                        "sessionDate": "2026-11-12",
+                        "status": "delayed",
+                        "ageSeconds": 960
+                      },
+                      "asOf": "2026-11-12T15:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalid_input": {
+                    "value": {
+                      "error": {
+                        "code": "invalid_input",
+                        "message": "Invalid input."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid session is required.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "authentication_required": {
+                    "value": {
+                      "error": {
+                        "code": "authentication_required",
+                        "message": "A valid session is required."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Wait before retrying.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rate_limited": {
+                    "value": {
+                      "error": {
+                        "code": "rate_limited",
+                        "message": "Wait before retrying."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "value": {
+                      "error": {
+                        "code": "internal_error",
+                        "message": "An unexpected server error occurred."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Contract stub: operation is not implemented.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_implemented": {
+                    "value": {
+                      "error": {
+                        "code": "not_implemented",
+                        "message": "Contract stub: operation is not implemented."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required data or dependency is unavailable.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unavailable": {
+                    "value": {
+                      "error": {
+                        "code": "unavailable",
+                        "message": "Required data or dependency is unavailable."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          },
+          "404": {
+            "description": "No visible resource exists.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "value": {
+                      "error": {
+                        "code": "not_found",
+                        "message": "No visible resource exists."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An inactive Stock cannot be used for this operation.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "stock_inactive": {
+                    "value": {
+                      "error": {
+                        "code": "stock_inactive",
+                        "message": "An inactive Stock cannot be used for this operation."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stocks/{stockId}/history": {
+      "get": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "History",
+        "description": "Inclusive UTC date range within seven years. Daily unadjusted closes only, date ascending. Known empty coverage is 200; unknown coverage/source failure is 503. Cursor binds Stock, dates and limit. STUB.",
+        "operationId": "getStockHistory",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "stockId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^stk_[a-z0-9_]{1,48}$",
+              "title": "Stockid"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Fromdate"
+            }
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Todate"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^[A-Za-z0-9_-]+$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPage"
+                },
+                "examples": {
+                  "history": {
+                    "value": {
+                      "stockId": "stk_aapl",
+                      "currency": "USD",
+                      "resolution": "1d",
+                      "basis": "unadjusted",
+                      "fromDate": "2026-11-10",
+                      "toDate": "2026-11-11",
+                      "points": [
+                        {
+                          "sessionDate": "2026-11-10",
+                          "close": "226.80",
+                          "providerTime": "2026-11-10T21:00:00Z"
+                        },
+                        {
+                          "sessionDate": "2026-11-11",
+                          "close": "227.50",
+                          "providerTime": "2026-11-11T21:00:00Z"
+                        }
+                      ],
+                      "coverage": "complete",
+                      "nextCursor": null,
+                      "asOf": "2026-11-12T15:00:00Z"
+                    }
+                  },
+                  "emptyHistory": {
+                    "value": {
+                      "stockId": "stk_aapl",
+                      "currency": "USD",
+                      "resolution": "1d",
+                      "basis": "unadjusted",
+                      "fromDate": "2026-11-07",
+                      "toDate": "2026-11-08",
+                      "points": [],
+                      "coverage": "complete",
+                      "nextCursor": null,
+                      "asOf": "2026-11-12T15:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalid_input": {
+                    "value": {
+                      "error": {
+                        "code": "invalid_input",
+                        "message": "Invalid input."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid session is required.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "authentication_required": {
+                    "value": {
+                      "error": {
+                        "code": "authentication_required",
+                        "message": "A valid session is required."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Wait before retrying.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rate_limited": {
+                    "value": {
+                      "error": {
+                        "code": "rate_limited",
+                        "message": "Wait before retrying."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "value": {
+                      "error": {
+                        "code": "internal_error",
+                        "message": "An unexpected server error occurred."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Contract stub: operation is not implemented.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_implemented": {
+                    "value": {
+                      "error": {
+                        "code": "not_implemented",
+                        "message": "Contract stub: operation is not implemented."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required data or dependency is unavailable.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unavailable": {
+                    "value": {
+                      "error": {
+                        "code": "unavailable",
+                        "message": "Required data or dependency is unavailable."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          },
+          "404": {
+            "description": "No visible resource exists.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "value": {
+                      "error": {
+                        "code": "not_found",
+                        "message": "No visible resource exists."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/watchlist": {
+      "get": {
+        "tags": [
+          "Watchlist"
+        ],
+        "summary": "Watchlist",
+        "description": "Only the authenticated identity's membership; addedAt descending then stockId. Query authoritative membership on every page. A cursor bound to another owner/version or expired is 400; never serve a stale private snapshot. Missing price stays null without removing membership. STUB.",
+        "operationId": "getMyWatchlist",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^[A-Za-z0-9_-]+$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistPage"
+                },
+                "examples": {
+                  "watchlist": {
+                    "value": {
+                      "items": [
+                        {
+                          "stock": {
+                            "stockId": "stk_aapl",
+                            "symbol": "AAPL",
+                            "name": "Apple Inc.",
+                            "exchange": "XNAS",
+                            "sector": "technology",
+                            "currency": "USD",
+                            "instrumentType": "common",
+                            "active": true
+                          },
+                          "addedAt": "2026-11-12T15:00:01Z",
+                          "quote": {
+                            "price": "230.50",
+                            "currency": "USD",
+                            "providerTime": "2026-11-12T14:44:00Z",
+                            "sessionDate": "2026-11-12",
+                            "status": "delayed",
+                            "ageSeconds": 960
+                          }
+                        }
+                      ],
+                      "nextCursor": null,
+                      "version": 7
+                    }
+                  },
+                  "emptyWatchlist": {
+                    "value": {
+                      "items": [],
+                      "nextCursor": null,
+                      "version": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalid_input": {
+                    "value": {
+                      "error": {
+                        "code": "invalid_input",
+                        "message": "Invalid input."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid session is required.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "authentication_required": {
+                    "value": {
+                      "error": {
+                        "code": "authentication_required",
+                        "message": "A valid session is required."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Wait before retrying.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rate_limited": {
+                    "value": {
+                      "error": {
+                        "code": "rate_limited",
+                        "message": "Wait before retrying."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "value": {
+                      "error": {
+                        "code": "internal_error",
+                        "message": "An unexpected server error occurred."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Contract stub: operation is not implemented.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_implemented": {
+                    "value": {
+                      "error": {
+                        "code": "not_implemented",
+                        "message": "Contract stub: operation is not implemented."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required data or dependency is unavailable.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unavailable": {
+                    "value": {
+                      "error": {
+                        "code": "unavailable",
+                        "message": "Required data or dependency is unavailable."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/watchlist/items": {
+      "post": {
+        "tags": [
+          "Watchlist"
+        ],
+        "summary": "Add",
+        "description": "Owner comes only from authentication. Reject owner/version/addedAt fields. Active supported Stock required. Confirm only after authoritative commit; duplicates create no extra membership. STUB.",
+        "operationId": "addToMyWatchlist",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddStock"
+              },
+              "examples": {
+                "add": {
+                  "value": {
+                    "stockId": "stk_aapl"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "New membership durably committed.",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "/v1/watchlist/items/stk_aapl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                },
+                "examples": {
+                  "created": {
+                    "value": {
+                      "stockId": "stk_aapl",
+                      "addedAt": "2026-11-12T15:00:01Z",
+                      "version": 7
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "invalid_input": {
+                    "value": {
+                      "error": {
+                        "code": "invalid_input",
+                        "message": "Invalid input."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid session is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "authentication_required": {
+                    "value": {
+                      "error": {
+                        "code": "authentication_required",
+                        "message": "A valid session is required."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Wait before retrying.",
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1.0
+                },
+                "example": 2
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "rate_limited": {
+                    "value": {
+                      "error": {
+                        "code": "rate_limited",
+                        "message": "Wait before retrying."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "internal_error": {
+                    "value": {
+                      "error": {
+                        "code": "internal_error",
+                        "message": "An unexpected server error occurred."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Contract stub: operation is not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "not_implemented": {
+                    "value": {
+                      "error": {
+                        "code": "not_implemented",
+                        "message": "Contract stub: operation is not implemented."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required data or dependency is unavailable.",
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1.0
+                },
+                "example": 2
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "unavailable": {
+                    "value": {
+                      "error": {
+                        "code": "unavailable",
+                        "message": "Required data or dependency is unavailable."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CSRF validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "csrf_invalid": {
+                    "value": {
+                      "error": {
+                        "code": "csrf_invalid",
+                        "message": "CSRF validation failed."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No visible resource exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "not_found": {
+                    "value": {
+                      "error": {
+                        "code": "not_found",
+                        "message": "No visible resource exists."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An inactive Stock cannot be used for this operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "stock_inactive": {
+                    "value": {
+                      "error": {
+                        "code": "stock_inactive",
+                        "message": "An inactive Stock cannot be used for this operation."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Already present; confirmed no-op with existing addedAt/version.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                },
+                "examples": {
+                  "existing": {
+                    "value": {
+                      "stockId": "stk_aapl",
+                      "addedAt": "2026-11-12T15:00:01Z",
+                      "version": 7
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": [],
+            "CsrfToken": []
+          }
+        ]
+      }
+    },
+    "/v1/watchlist/items/{stockId}": {
+      "delete": {
+        "tags": [
+          "Watchlist"
+        ],
+        "summary": "Remove",
+        "description": "Delete only the caller's membership, including inactive Stocks. Already absent returns 204 with no body. No existence leak about other owners. Lost commit confirmation is 503 with code change_unconfirmed. STUB.",
+        "operationId": "removeFromMyWatchlist",
+        "security": [
+          {
+            "SessionCookie": [],
+            "CsrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "stockId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^stk_[a-z0-9_]{1,48}$",
+              "title": "Stockid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalid_input": {
+                    "value": {
+                      "error": {
+                        "code": "invalid_input",
+                        "message": "Invalid input."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid session is required.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "authentication_required": {
+                    "value": {
+                      "error": {
+                        "code": "authentication_required",
+                        "message": "A valid session is required."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Wait before retrying.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rate_limited": {
+                    "value": {
+                      "error": {
+                        "code": "rate_limited",
+                        "message": "Wait before retrying."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "value": {
+                      "error": {
+                        "code": "internal_error",
+                        "message": "An unexpected server error occurred."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Contract stub: operation is not implemented.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_implemented": {
+                    "value": {
+                      "error": {
+                        "code": "not_implemented",
+                        "message": "Contract stub: operation is not implemented."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required data or dependency is unavailable.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unavailable": {
+                    "value": {
+                      "error": {
+                        "code": "unavailable",
+                        "message": "Required data or dependency is unavailable."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Minimum wait in whole seconds. Use backoff if absent.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "example": 2
+              }
+            }
+          },
+          "403": {
+            "description": "CSRF validation failed.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "csrf_invalid": {
+                    "value": {
+                      "error": {
+                        "code": "csrf_invalid",
+                        "message": "CSRF validation failed."
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddStock": {
+        "properties": {
+          "stockId": {
+            "type": "string",
+            "pattern": "^stk_[a-z0-9_]{1,48}$",
+            "title": "Stockid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stockId"
+        ],
+        "title": "AddStock"
+      },
+      "Error": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "Error"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HistoryPage": {
+        "properties": {
+          "stockId": {
+            "type": "string",
+            "pattern": "^stk_[a-z0-9_]{1,48}$",
+            "title": "Stockid"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency"
+          },
+          "resolution": {
+            "type": "string",
+            "const": "1d",
+            "title": "Resolution"
+          },
+          "basis": {
+            "type": "string",
+            "const": "unadjusted",
+            "title": "Basis"
+          },
+          "fromDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Fromdate"
+          },
+          "toDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Todate"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryPoint"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Points"
+          },
+          "coverage": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial"
+            ],
+            "title": "Coverage"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asof"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stockId",
+          "currency",
+          "resolution",
+          "basis",
+          "fromDate",
+          "toDate",
+          "points",
+          "coverage",
+          "nextCursor",
+          "asOf"
+        ],
+        "title": "HistoryPage"
+      },
+      "HistoryPoint": {
+        "properties": {
+          "sessionDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Sessiondate"
+          },
+          "close": {
+            "type": "string",
+            "pattern": "^(?:[1-9][0-9]*|0)\\.[0-9]{2,4}$",
+            "title": "Close"
+          },
+          "providerTime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Providertime"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sessionDate",
+          "close",
+          "providerTime"
+        ],
+        "title": "HistoryPoint"
+      },
+      "Membership": {
+        "properties": {
+          "stockId": {
+            "type": "string",
+            "pattern": "^stk_[a-z0-9_]{1,48}$",
+            "title": "Stockid"
+          },
+          "addedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Addedat"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stockId",
+          "addedAt",
+          "version"
+        ],
+        "title": "Membership"
+      },
+      "Overview": {
+        "properties": {
+          "exchange": {
+            "type": "string",
+            "const": "XNAS",
+            "title": "Exchange"
+          },
+          "sessionDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Sessiondate"
+          },
+          "marketStatus": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed",
+              "opening_grace",
+              "closing_grace"
+            ],
+            "title": "Marketstatus"
+          },
+          "activeStockCount": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Activestockcount"
+          },
+          "pricedStockCount": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pricedstockcount"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asof"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "exchange",
+          "sessionDate",
+          "marketStatus",
+          "activeStockCount",
+          "pricedStockCount",
+          "asOf"
+        ],
+        "title": "Overview"
+      },
+      "PriceResponse": {
+        "properties": {
+          "stockId": {
+            "type": "string",
+            "pattern": "^stk_[a-z0-9_]{1,48}$",
+            "title": "Stockid"
+          },
+          "quote": {
+            "$ref": "#/components/schemas/Quote"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asof"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stockId",
+          "quote",
+          "asOf"
+        ],
+        "title": "PriceResponse"
+      },
+      "Quote": {
+        "properties": {
+          "price": {
+            "type": "string",
+            "pattern": "^(?:[1-9][0-9]*|0)\\.[0-9]{2,4}$",
+            "title": "Price"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency"
+          },
+          "providerTime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Providertime"
+          },
+          "sessionDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Sessiondate"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "delayed_feed",
+              "delayed",
+              "market_closed",
+              "awaiting_delayed_quote",
+              "final_price_pending"
+            ],
+            "title": "Status"
+          },
+          "ageSeconds": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Ageseconds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "price",
+          "currency",
+          "providerTime",
+          "sessionDate",
+          "status",
+          "ageSeconds"
+        ],
+        "title": "Quote"
+      },
+      "Stock": {
+        "properties": {
+          "stockId": {
+            "type": "string",
+            "pattern": "^stk_[a-z0-9_]{1,48}$",
+            "title": "Stockid"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "exchange": {
+            "type": "string",
+            "const": "XNAS",
+            "title": "Exchange"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency"
+          },
+          "instrumentType": {
+            "type": "string",
+            "enum": [
+              "common",
+              "ordinary",
+              "equity_adr",
+              "equity_ads"
+            ],
+            "title": "Instrumenttype"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stockId",
+          "symbol",
+          "name",
+          "exchange",
+          "sector",
+          "currency",
+          "instrumentType",
+          "active"
+        ],
+        "title": "Stock"
+      },
+      "StockPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StockSummary"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Items"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asof"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor",
+          "asOf"
+        ],
+        "title": "StockPage"
+      },
+      "StockSummary": {
+        "properties": {
+          "stockId": {
+            "type": "string",
+            "pattern": "^stk_[a-z0-9_]{1,48}$",
+            "title": "Stockid"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "exchange": {
+            "type": "string",
+            "const": "XNAS",
+            "title": "Exchange"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency"
+          },
+          "instrumentType": {
+            "type": "string",
+            "enum": [
+              "common",
+              "ordinary",
+              "equity_adr",
+              "equity_ads"
+            ],
+            "title": "Instrumenttype"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Quote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "changePercent": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?[0-9]+\\.[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changepercent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stockId",
+          "symbol",
+          "name",
+          "exchange",
+          "sector",
+          "currency",
+          "instrumentType",
+          "active",
+          "quote",
+          "changePercent"
+        ],
+        "title": "StockSummary"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WatchlistItem": {
+        "properties": {
+          "stock": {
+            "$ref": "#/components/schemas/Stock"
+          },
+          "addedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Addedat"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Quote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stock",
+          "addedAt",
+          "quote"
+        ],
+        "title": "WatchlistItem"
+      },
+      "WatchlistPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WatchlistItem"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Items"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor",
+          "version"
+        ],
+        "title": "WatchlistPage"
+      }
+    },
+    "securitySchemes": {
+      "SessionCookie": {
+        "type": "apiKey",
+        "description": "Opaque Secure, HttpOnly, SameSite session resolved by the external authentication boundary. Never use a caller-supplied owner ID.",
+        "in": "cookie",
+        "name": "dashboard_session"
+      },
+      "CsrfToken": {
+        "type": "apiKey",
+        "description": "Session-bound CSRF token; required together with SessionCookie on mutations.",
+        "in": "header",
+        "name": "X-CSRF-Token"
+      }
+    }
+  }
+}
