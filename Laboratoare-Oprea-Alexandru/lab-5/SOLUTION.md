@@ -221,7 +221,7 @@ Illustrative base URL: `https://dashboard.example`. It is a documentation domain
 | Add a Stock | `POST /v1/watchlist/items` | JSON `{ "stockId": "stk_aapl" }` | 201 newly committed membership + Location; 200 existing no-op | Current User's list only, session-bound CSRF check, active supported Stock. |
 | Remove a Stock | `DELETE /v1/watchlist/items/{stockId}` | Stock ID, no body | 204 without body, including already absent | Current User's entry only; removal of inactive entries allowed; CSRF check. |
 
-No `ownerId`, `userId`, `watchlistId`, `version`, `addedAt`, price, or server status is accepted in the addition body. `AddStock` is distinct from response models and forbids extra fields. Unknown/invalid body/query fields and malformed JSON produce `400`. Stock IDs match `^stk_[a-z0-9_]{1,48}$`; well-formed unknown IDs produce `404` on Stock/detail/History/price and on additions. Removal of an absent owned membership remains 204 without revealing whether anyone else follows that Stock.
+No `ownerId`, `userId`, `watchlistId`, `version`, `addedAt`, price, or server status is accepted in the addition body. `AddStock` is distinct from response models and forbids extra fields. Input names are strictly camelCase: stock_id, from_date, and other stored-field spellings are not API aliases. Unknown/invalid body/query fields and malformed JSON produce `400`. Stock IDs match `^stk_[a-z0-9_]{1,48}$`; well-formed unknown IDs produce `404` on Stock/detail/History/price and on additions. Removal of an absent owned membership remains 204 without revealing whether anyone else follows that Stock.
 
 ### 3.1. Inputs, bounds, and defaults
 
@@ -232,7 +232,7 @@ No `ownerId`, `userId`, `watchlistId`, `version`, `addedAt`, price, or server st
 | `q` | Stock collection | Omitted = no text restriction. When present, 1–80 characters and not whitespace-only. Trim, Unicode-casefold and match a substring of name or symbol; no client regular expressions. |
 | `sort` | Stock collection | Default symbol: casefolded symbol ascending, stockId tie-breaker. Alternative trending uses the rank above. Apply combined filters **before** sorting and limiting. |
 | `limit` | Stocks / Watchlist | Default 20, integer 1–100. Watchlist order is addedAt descending then stockId ascending. |
-| `fromDate`, `toDate` | History | Both required; ISO dates, inclusive, fromDate ≤ toDate, no future date, within the rolling seven-calendar-year window at UTC request date. Leap-day cutoff maps to 28 February. |
+| `fromDate`, `toDate` | History | Both required; America/New_York session-date labels in exact YYYY-MM-DD format (numeric timestamps and datetime strings are rejected), inclusive, fromDate ≤ toDate, no future date, within the rolling seven-calendar-year window at UTC request date. Leap-day cutoff maps to 28 February. |
 | `limit` | History | Default 100, integer 1–200. Order sessionDate ascending; one point per date. Only 1d unadjusted history is offered, so no ambiguous resolution/basis parameters exist. |
 | `cursor` | All three collections | Omitted for first page; otherwise 1–512 URL-safe characters. Opaque server token, not an authorisation credential. Malformed, expired, altered, query-mismatched or other-owner token: 400. |
 
@@ -244,7 +244,7 @@ History pagination is an API projection over Lab 4's canonical public full-range
 
 ### 3.2. Success JSON examples
 
-Amounts are decimal **strings** with currency, avoiding floating-point interpretation. Timestamps are RFC 3339 UTC strings. Nullable fields are included explicitly; null never means monetary zero. Examples below also appear in the source-generated OpenAPI document.
+Amounts are positive decimal **strings** with currency and 2–4 fractional digits, avoiding floating-point interpretation. Zero is rejected in both quote and History schemas. Timestamps are RFC 3339 UTC strings. Nullable fields are included explicitly; null never means monetary zero. Examples below also appear in the source-generated OpenAPI document.
 
 #### Market overview — 200
 
@@ -401,12 +401,12 @@ Filtered page: `GET /v1/stocks?exchange=XNAS&sector=technology&q=app&sort=symbol
         "providerTime": "2026-11-12T14:44:00Z",
         "sessionDate": "2026-11-12",
         "status": "delayed",
-        "ageSeconds": 960
+        "ageSeconds": 961
       }
     }
   ],
   "nextCursor": null,
-  "version": 7
+  "version": 1
 }
 ```
 
@@ -434,7 +434,7 @@ Filtered page: `GET /v1/stocks?exchange=XNAS&sector=technology&q=app&sort=symbol
 {
   "stockId": "stk_aapl",
   "addedAt": "2026-11-12T15:00:01Z",
-  "version": 7
+  "version": 1
 }
 ```
 
@@ -508,9 +508,9 @@ Illustrative base URL: **https://dashboard.example**. The browser sends `Cookie:
 | 2 | `GET /v1/stocks/stk_aapl` | 200 Stock reference example; show name, symbol, sector, exchange, currency, and active state. |
 | 3 | `GET /v1/stocks/stk_aapl/price` | 200 PriceResponse example: USD 230.50, provider time 14:44, age 960 seconds, delayed label at 15:00 UTC. |
 | 4 | `GET /v1/stocks/stk_aapl/history?fromDate=2026-11-10&toDate=2026-11-11&limit=100` | 200 HistoryPage example: two unadjusted daily closes, complete coverage and no next page. |
-| 5 | `GET /v1/watchlist?limit=20` | 200 owned list, initially the emptyWatchlist example. If nonempty, follow pages to determine membership; do not infer absence from only the first page. |
+| 5 | `GET /v1/watchlist?limit=20` | 200 owned list, initially the emptyWatchlist example with version 0. With no intervening mutation, the first addition advances it to version 1. If nonempty, follow pages to determine membership; do not infer absence from only the first page. |
 | 6 | `POST /v1/watchlist/items` with Content-Type application/json, X-CSRF-Token and body `{"stockId":"stk_aapl"}` | 201 Membership and Location on a new durable addition; 200 on a confirmed duplicate. |
-| 7 | `GET /v1/watchlist?limit=20` with no old cursor | 200 owned list including stk_aapl and version 7 in the example, or a later confirmed state. Fetch next pages if necessary. |
+| 7 | `GET /v1/watchlist?limit=20` with no old cursor | 200 owned list including stk_aapl and version 1 in the example, or a later confirmed state. Fetch next pages if necessary. |
 
 Calls 2–5 may run concurrently after selecting the Stock; the numbered order describes their logical purpose. Stock detail needs both the dedicated **price and History requests**; the reference endpoint alone does not supply them. A surrounding overview widget separately calls `GET /v1/market/overview`; it is not required for the stated trending-to-detail-to-Watchlist flow. Removal, outside this flow, uses DELETE on the same Stock membership URL and expects an empty 204 response.
 
@@ -528,7 +528,7 @@ HTTP/1.1 201 Created
 Location: /v1/watchlist/items/stk_aapl
 Content-Type: application/json
 
-{"stockId":"stk_aapl","addedAt":"2026-11-12T15:00:01Z","version":7}
+{"stockId":"stk_aapl","addedAt":"2026-11-12T15:00:01Z","version":1}
 ```
 
 | UI state | Visible behaviour |

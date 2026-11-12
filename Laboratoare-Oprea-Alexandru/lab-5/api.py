@@ -3,21 +3,34 @@ Generate with: python generate_openapi.py
 No successful business operation is simulated by this server.
 """
 from datetime import date, datetime, timezone
+import re
 from typing import Annotated, Literal
 from fastapi import FastAPI, Depends, Query, Path, Body, Request, Response, Security
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyCookie, APIKeyHeader
 from fastapi.openapi.utils import get_openapi
-from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, model_validator
+from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, BeforeValidator, model_validator
 from pydantic.alias_generators import to_camel
 from starlette.exceptions import HTTPException
 
 ID = Annotated[str, Field(pattern=r'^stk_[a-z0-9_]{1,48}$')]
-Money = Annotated[str, Field(pattern=r'^(?:[1-9][0-9]*|0)\.[0-9]{2,4}$')]
+Money = Annotated[str, Field(pattern=r'^(?:[1-9][0-9]*\.[0-9]{2,4}|0\.(?:[1-9][0-9]{1,3}|0[1-9][0-9]{0,2}|00[1-9][0-9]?|000[1-9]))$')]
 Cursor = Annotated[str, Field(min_length=1,max_length=512,pattern=r'^[A-Za-z0-9_-]+$')]
 class Model(BaseModel):
     model_config=ConfigDict(alias_generator=to_camel,populate_by_name=True,extra='forbid')
+class InputModel(Model):
+    model_config=ConfigDict(populate_by_name=False,validate_by_name=False)
+class NoQuery(InputModel):
+    pass
+
+def iso_date(value):
+    if type(value) is date:return value
+    if not isinstance(value,str) or not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}',value):
+        raise ValueError('Use an ISO calendar date: YYYY-MM-DD')
+    return value
+ISODate=Annotated[date,BeforeValidator(iso_date)]
+
 class ErrorDetail(Model):
     code: str
     message: str
@@ -85,13 +98,13 @@ class WatchlistPage(Model):
     items: list[WatchlistItem]=Field(max_length=100)
     next_cursor: Cursor|None
     version: int=Field(ge=0)
-class AddStock(Model):
+class AddStock(InputModel):
     stock_id: ID
 class Membership(Model):
     stock_id: ID
     added_at: AwareDatetime
     version: int=Field(ge=0)
-class StockQuery(Model):
+class StockQuery(InputModel):
     exchange: Literal['XNAS']='XNAS'
     sector: Literal['technology','financials','healthcare','industrials','consumer_discretionary','consumer_staples','energy','materials','real_estate','utilities','communication_services','unknown']|None=None
     q: str|None=Field(default=None,min_length=1,max_length=80)
@@ -102,12 +115,12 @@ class StockQuery(Model):
     def query_text(self):
         if self.q is not None and not self.q.strip():raise ValueError('q must contain a non-space character')
         return self
-class PageQuery(Model):
+class PageQuery(InputModel):
     limit: int=Field(default=20,ge=1,le=100)
     cursor: Cursor|None=None
-class HistoryQuery(Model):
-    from_date: date
-    to_date: date
+class HistoryQuery(InputModel):
+    from_date: ISODate
+    to_date: ISODate
     limit: int=Field(default=100,ge=1,le=200)
     cursor: Cursor|None=None
     @model_validator(mode='after')
@@ -131,10 +144,10 @@ EXAMPLES={
 'price':{'stockId':'stk_aapl','quote':QUOTE,'asOf':T},
 'history':{'stockId':'stk_aapl','currency':'USD','resolution':'1d','basis':'unadjusted','fromDate':'2026-11-10','toDate':'2026-11-11','points':[{'sessionDate':'2026-11-10','close':'226.80','providerTime':'2026-11-10T21:00:00Z'},{'sessionDate':'2026-11-11','close':'227.50','providerTime':'2026-11-11T21:00:00Z'}],'coverage':'complete','nextCursor':None,'asOf':T},
 'emptyHistory':{'stockId':'stk_aapl','currency':'USD','resolution':'1d','basis':'unadjusted','fromDate':'2026-11-07','toDate':'2026-11-08','points':[],'coverage':'complete','nextCursor':None,'asOf':T},
-'watchlist':{'items':[{'stock':STOCK,'addedAt':'2026-11-12T15:00:01Z','quote':QUOTE}],'nextCursor':None,'version':7},
+'watchlist':{'items':[{'stock':STOCK,'addedAt':'2026-11-12T15:00:01Z','quote':{**QUOTE,'ageSeconds':961}}],'nextCursor':None,'version':1},
 'emptyWatchlist':{'items':[],'nextCursor':None,'version':0},
 'add':{'stockId':'stk_aapl'},
-'membership':{'stockId':'stk_aapl','addedAt':'2026-11-12T15:00:01Z','version':7},
+'membership':{'stockId':'stk_aapl','addedAt':'2026-11-12T15:00:01Z','version':1},
 'error':{'error':{'code':'invalid_input','message':'limit must be between 1 and 100'}}}
 
 app=FastAPI(title='Personal Investment Dashboard API',version='1.0.0',description='Lab 5 source-generated contract. All business handlers and authentication adapters are explicitly unimplemented stubs (501). Examples are synthetic, not live market data.',servers=[{'url':'https://dashboard.example','description':'Illustrative same-origin deployment, not a live server'}])
@@ -183,7 +196,7 @@ def success_examples(**names):return {'application/json':{'examples':{label:{'va
 READ=[Depends(current_identity)]
 WRITE=[Depends(mutation_identity)]
 @app.get('/v1/market/overview',operation_id='getMarketOverview',tags=['Market'],response_model=Overview,dependencies=READ,responses={**failures(),200:{'content':success_examples(overview='overview')}})
-def overview():
+def overview(query:Annotated[NoQuery,Query()]):
     """Counts of supported active/priced Stocks and known session state. Unknown calendar or incomplete reference coverage returns 503. STUB."""
     stub()
 @app.get('/v1/stocks',operation_id='listStocks',tags=['Stocks'],response_model=StockPage,dependencies=READ,responses={**failures(),200:{'content':success_examples(filteredPage='filteredPage',emptyList='emptyList')}})
@@ -191,27 +204,27 @@ def stocks(query:Annotated[StockQuery,Query()]):
     """Active Stocks only. Combine exchange, sector and case-insensitive name/symbol q before pagination. Default symbol ascending then stockId; trending orders absolute percentage change descending then stockId. Cursor binds normalised filters, sort and limit. Unknown/expired/mismatched cursor is 400. STUB."""
     stub()
 @app.get('/v1/stocks/{stockId}',operation_id='getStock',tags=['Stocks'],response_model=Stock,dependencies=READ,responses={**failures(404),200:{'content':success_examples(stock='stock')}})
-def stock(stock_id:Annotated[ID,Path(alias='stockId')]):
+def stock(stock_id:Annotated[ID,Path(alias='stockId')],query:Annotated[NoQuery,Query()]):
     """Stable identity lookup; retained inactive instruments remain identifiable. Unknown ID returns 404. STUB."""
     stub()
 @app.get('/v1/stocks/{stockId}/price',operation_id='getStockPrice',tags=['Stocks'],response_model=PriceResponse,dependencies=READ,responses={**failures(404,409),200:{'content':success_examples(price='price')}})
-def price(stock_id:Annotated[ID,Path(alias='stockId')]):
+def price(stock_id:Annotated[ID,Path(alias='stockId')],query:Annotated[NoQuery,Query()]):
     """Return only a policy-valid quotation/close. Preserve source time; normal-session age >20 minutes, missing data or unknown calendar returns 503. Unknown instrument: 404; inactive: 409. STUB."""
     stub()
 @app.get('/v1/stocks/{stockId}/history',operation_id='getStockHistory',tags=['Stocks'],response_model=HistoryPage,dependencies=READ,responses={**failures(404),200:{'content':success_examples(history='history',emptyHistory='emptyHistory')}})
 def history(stock_id:Annotated[ID,Path(alias='stockId')],query:Annotated[HistoryQuery,Query()]):
-    """Inclusive UTC date range within seven years. Daily unadjusted closes only, date ascending. Known empty coverage is 200; unknown coverage/source failure is 503. Cursor binds Stock, dates and limit. STUB."""
+    """Inclusive exchange session-date range within seven years at the UTC request date. Daily unadjusted closes only, date ascending. Known empty coverage is 200; unknown coverage/source failure is 503. Cursor binds Stock, dates and limit. STUB."""
     stub()
 @app.get('/v1/watchlist',operation_id='getMyWatchlist',tags=['Watchlist'],response_model=WatchlistPage,dependencies=READ,responses={**failures(),200:{'content':success_examples(watchlist='watchlist',emptyWatchlist='emptyWatchlist')}})
 def watchlist(query:Annotated[PageQuery,Query()]):
     """Only the authenticated identity's membership; addedAt descending then stockId. Query authoritative membership on every page. A cursor bound to another owner/version or expired is 400; never serve a stale private snapshot. Missing price stays null without removing membership. STUB."""
     stub()
 @app.post('/v1/watchlist/items',operation_id='addToMyWatchlist',tags=['Watchlist'],response_model=Membership,status_code=201,dependencies=WRITE,responses={**failures(403,404,409),201:{'description':'New membership durably committed.','content':success_examples(created='membership'),'headers':{'Location':{'schema':{'type':'string'},'example':'/v1/watchlist/items/stk_aapl'}}},200:{'model':Membership,'description':'Already present; confirmed no-op with existing addedAt/version.','content':success_examples(existing='membership')}})
-def add(body:Annotated[AddStock,Body(openapi_examples={'add':{'value':EXAMPLES['add']}})]):
+def add(body:Annotated[AddStock,Body(openapi_examples={'add':{'value':EXAMPLES['add']}})],query:Annotated[NoQuery,Query()]):
     """Owner comes only from authentication. Reject owner/version/addedAt fields. Active supported Stock required. Confirm only after authoritative commit; duplicates create no extra membership. STUB."""
     stub()
 @app.delete('/v1/watchlist/items/{stockId}',operation_id='removeFromMyWatchlist',tags=['Watchlist'],status_code=204,response_class=Response,dependencies=WRITE,responses={**failures(403)})
-def remove(stock_id:Annotated[ID,Path(alias='stockId')]):
+def remove(stock_id:Annotated[ID,Path(alias='stockId')],query:Annotated[NoQuery,Query()]):
     """Delete only the caller's membership, including inactive Stocks. Already absent returns 204 with no body. No existence leak about other owners. Lost commit confirmation is 503 with code change_unconfirmed. STUB."""
     stub()
 
